@@ -1,4 +1,11 @@
-import type { Lead, LeadInput, LeadStatus, PaginatedLeads, PaginationMeta } from '@/types/lead';
+import type {
+  ImportLeadResult,
+  Lead,
+  LeadInput,
+  LeadStatus,
+  PaginatedLeads,
+  PaginationMeta,
+} from '@/types/lead';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api').replace(
   /\/$/,
@@ -125,4 +132,23 @@ export async function updateLead(id: string, data: Partial<LeadInput>): Promise<
   });
 
   return toLead(row);
+}
+
+interface ImportLeadDocumentResult {
+  created: LeadDocument[];
+  summary: ImportLeadResult['summary'];
+  errors: ImportLeadResult['errors'];
+}
+
+export async function importLeads(leads: LeadInput[]): Promise<ImportLeadResult> {
+  const result = await request<ImportLeadDocumentResult>('/leads/import', {
+    method: 'POST',
+    body: JSON.stringify({ leads }),
+  });
+
+  return {
+    created: result.created.map(toLead),
+    summary: result.summary,
+    errors: result.errors,
+  };
 }

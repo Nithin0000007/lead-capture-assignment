@@ -1,11 +1,12 @@
-import { Users, Plus } from 'lucide-react';
+import { Upload, Users, Plus } from 'lucide-react';
 
 interface HeaderProps {
   onNewLead: () => void;
+  onImportLeads: () => void;
   leadCount?: number;
 }
 
-export function Header({ onNewLead, leadCount }: HeaderProps) {
+export function Header({ onNewLead, onImportLeads, leadCount }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-200/60">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -24,14 +25,24 @@ export function Header({ onNewLead, leadCount }: HeaderProps) {
             </div>
           </div>
 
-          <button
-            onClick={onNewLead}
-            className="inline-flex items-center gap-2 h-9 px-3.5 sm:px-4 text-sm font-medium text-white bg-teal-600 rounded-lg shadow-sm shadow-teal-600/20 transition-all duration-150 hover:bg-teal-700 hover:shadow-md hover:shadow-teal-600/25 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New Lead</span>
-            <span className="sm:hidden">New</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onImportLeads}
+              className="inline-flex items-center gap-2 h-9 px-3 sm:px-3.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm shadow-slate-900/5 transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+            >
+              <Upload className="h-4 w-4" />
+              <span className="hidden sm:inline">Import Leads</span>
+              <span className="sm:hidden">Import</span>
+            </button>
+            <button
+              onClick={onNewLead}
+              className="inline-flex items-center gap-2 h-9 px-3.5 sm:px-4 text-sm font-medium text-white bg-teal-600 rounded-lg shadow-sm shadow-teal-600/20 transition-all duration-150 hover:bg-teal-700 hover:shadow-md hover:shadow-teal-600/25 active:scale-[0.98]"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New Lead</span>
+              <span className="sm:hidden">New</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>

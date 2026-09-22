@@ -30,6 +30,21 @@ export interface PaginatedLeads {
   pagination: PaginationMeta;
 }
 
+export type ImportField = keyof LeadInput;
+
+export interface ImportLeadResult {
+  created: Lead[];
+  summary: {
+    received: number;
+    created: number;
+    failed: number;
+  };
+  errors: Array<{
+    row: number;
+    error: string;
+  }>;
+}
+
 export const LEAD_STATUSES: LeadStatus[] = [
   'New',
   'Contacted',

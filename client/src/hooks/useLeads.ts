@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getLeads, searchLeads, createLead, updateLeadStatus, updateLead } from '@/api/leads';
+import {
+  getLeads,
+  searchLeads,
+  createLead,
+  updateLeadStatus,
+  updateLead,
+  importLeads,
+} from '@/api/leads';
 import { DEFAULT_PAGE_SIZE } from '@/types/lead';
-import type { Lead, LeadInput, LeadStatus, PaginationMeta } from '@/types/lead';
+import type { ImportLeadResult, Lead, LeadInput, LeadStatus, PaginationMeta } from '@/types/lead';
 
 const initialPagination: PaginationMeta = {
   page: 1,
@@ -87,6 +94,19 @@ export function useLeads() {
     return updated;
   }, []);
 
+  const importLeadRows = useCallback(async (rows: LeadInput[]): Promise<ImportLeadResult> => {
+    const result = await importLeads(rows);
+    setPage(1);
+
+    const refreshed = activeSearch
+      ? await searchLeads(activeSearch, { page: 1, limit })
+      : await getLeads({ page: 1, limit });
+
+    setLeads(refreshed.leads);
+    setPagination(refreshed.pagination);
+    return result;
+  }, [activeSearch, limit]);
+
   const changePage = useCallback((nextPage: number) => {
     setPage(nextPage);
   }, []);
@@ -113,5 +133,6 @@ export function useLeads() {
     addLead,
     changeStatus,
     editLead,
+    importLeadRows,
   };
 }
