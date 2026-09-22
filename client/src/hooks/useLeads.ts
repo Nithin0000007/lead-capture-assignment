@@ -1,60 +1,79 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getLeads, searchLeads, createLead, updateLeadStatus, updateLead } from '@/api/leads';
-import type { Lead, LeadInput, LeadStatus } from '@/types/lead';
+import {
+  getLeads,
+  searchLeads,
+  createLead,
+  updateLeadStatus,
+  updateLead,
+  importLeads,
+} from '@/api/leads';
+import { DEFAULT_PAGE_SIZE } from '@/types/lead';
+import type { ImportLeadResult, Lead, LeadInput, LeadStatus, PaginationMeta } from '@/types/lead';
+
+const initialPagination: PaginationMeta = {
+  page: 1,
+  limit: DEFAULT_PAGE_SIZE,
+  total: 0,
+  totalPages: 0,
+  hasPreviousPage: false,
+  hasNextPage: false,
+};
 
 export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
+  const [pagination, setPagination] = useState<PaginationMeta>(initialPagination);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getLeads();
-      setLeads(data);
+      const result = activeSearch
+        ? await searchLeads(activeSearch, { page, limit })
+        : await getLeads({ page, limit });
+      setLeads(result.leads);
+      setPagination(result.pagination);
+      setPage(result.pagination.page);
+      setLimit(result.pagination.limit);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load leads');
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const performSearch = useCallback(async (query: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await searchLeads(query);
-      setLeads(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to search leads');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  }, [activeSearch, limit, page]);
 
   const handleSearchChange = useCallback(
     (query: string) => {
       setSearchQuery(query);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        if (query.trim() === '') {
-          loadLeads();
-        } else {
-          performSearch(query.trim());
-        }
+        setPage(1);
+        setActiveSearch(query.trim());
       }, 300);
     },
-    [loadLeads, performSearch]
+    []
   );
 
   const addLead = useCallback(async (data: LeadInput): Promise<Lead> => {
     const newLead = await createLead(data);
-    setLeads((prev) => [newLead, ...prev]);
+    setPage(1);
+    try {
+      const result = activeSearch
+        ? await searchLeads(activeSearch, { page: 1, limit })
+        : await getLeads({ page: 1, limit });
+      setLeads(result.leads);
+      setPagination(result.pagination);
+    } catch {
+      setLeads((prev) => [newLead, ...prev].slice(0, limit));
+    }
     return newLead;
-  }, []);
+  }, [activeSearch, limit]);
 
   const changeStatus = useCallback(async (lead: Lead, status: LeadStatus) => {
     setLeads((prev) =>
@@ -75,6 +94,28 @@ export function useLeads() {
     return updated;
   }, []);
 
+  const importLeadRows = useCallback(async (rows: LeadInput[]): Promise<ImportLeadResult> => {
+    const result = await importLeads(rows);
+    setPage(1);
+
+    const refreshed = activeSearch
+      ? await searchLeads(activeSearch, { page: 1, limit })
+      : await getLeads({ page: 1, limit });
+
+    setLeads(refreshed.leads);
+    setPagination(refreshed.pagination);
+    return result;
+  }, [activeSearch, limit]);
+
+  const changePage = useCallback((nextPage: number) => {
+    setPage(nextPage);
+  }, []);
+
+  const changePageSize = useCallback((nextLimit: number) => {
+    setLimit(nextLimit);
+    setPage(1);
+  }, []);
+
   useEffect(() => {
     loadLeads();
   }, [loadLeads]);
@@ -84,10 +125,14 @@ export function useLeads() {
     loading,
     error,
     searchQuery,
+    pagination,
     handleSearchChange,
+    changePage,
+    changePageSize,
     loadLeads,
     addLead,
     changeStatus,
     editLead,
+    importLeadRows,
   };
 }

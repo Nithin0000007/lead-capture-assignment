@@ -1,121 +1,154 @@
-import { supabase } from '@/lib/supabase';
-import type { Lead, LeadInput, LeadStatus } from '@/types/lead';
+import type {
+  ImportLeadResult,
+  Lead,
+  LeadInput,
+  LeadStatus,
+  PaginatedLeads,
+  PaginationMeta,
+} from '@/types/lead';
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api').replace(
+  /\/$/,
+  ''
+);
+
+interface LeadDocument {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: LeadStatus;
+  createdAt: string;
 }
 
-async function fetchLeads(): Promise<Lead[]> {
-  const { data, error } = await supabase
-    .from('leads')
-    .select('*')
-    .order('created_at', { ascending: false });
+interface ApiResponse<T> {
+  data: T;
+  pagination?: PaginationMeta;
+  error?: string;
+}
 
-  if (error) throw error;
+interface LeadQueryParams {
+  page: number;
+  limit: number;
+  search?: string;
+}
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
+function toLead(row: LeadDocument): Lead {
+  return {
+    id: row._id,
     name: row.name,
     email: row.email,
     phone: row.phone,
-    status: row.status as LeadStatus,
-    createdAt: row.created_at,
-  }));
+    status: row.status,
+    createdAt: row.createdAt,
+  };
 }
 
-export async function getLeads(): Promise<Lead[]> {
-  await delay(300);
-  return fetchLeads();
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as Partial<ApiResponse<T>>;
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? 'Request failed');
+  }
+
+  if (payload.data === undefined) {
+    throw new Error('Invalid API response');
+  }
+
+  return payload.data;
 }
 
-export async function searchLeads(query: string): Promise<Lead[]> {
-  await delay(300);
-  const { data, error } = await supabase
-    .from('leads')
-    .select('*')
-    .or(`name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
-    .order('created_at', { ascending: false });
+async function requestPaginatedLeads(path: string): Promise<PaginatedLeads> {
+  const response = await fetch(`${API_BASE_URL}${path}`);
+  const payload = (await response.json().catch(() => ({}))) as Partial<
+    ApiResponse<LeadDocument[]>
+  >;
 
-  if (error) throw error;
+  if (!response.ok) {
+    throw new Error(payload.error ?? 'Request failed');
+  }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
-    status: row.status as LeadStatus,
-    createdAt: row.created_at,
-  }));
+  if (payload.data === undefined || payload.pagination === undefined) {
+    throw new Error('Invalid API response');
+  }
+
+  return {
+    leads: payload.data.map(toLead),
+    pagination: payload.pagination,
+  };
+}
+
+function buildLeadQuery({ page, limit, search }: LeadQueryParams): string {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (search) {
+    params.set('search', search);
+  }
+
+  return params.toString();
+}
+
+export function getLeads(params: LeadQueryParams): Promise<PaginatedLeads> {
+  return requestPaginatedLeads(`/leads?${buildLeadQuery(params)}`);
+}
+
+export function searchLeads(query: string, params: Omit<LeadQueryParams, 'search'>): Promise<PaginatedLeads> {
+  return getLeads({ ...params, search: query });
 }
 
 export async function createLead(data: LeadInput): Promise<Lead> {
-  await delay(400);
-  const { data: row, error } = await supabase
-    .from('leads')
-    .insert({
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      status: data.status,
-    })
-    .select()
-    .single();
+  const row = await request<LeadDocument>('/leads', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 
-  if (error) throw error;
-
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
-    status: row.status as LeadStatus,
-    createdAt: row.created_at,
-  };
+  return toLead(row);
 }
 
 export async function updateLeadStatus(id: string, status: LeadStatus): Promise<Lead> {
-  await delay(250);
-  const { data: row, error } = await supabase
-    .from('leads')
-    .update({ status })
-    .eq('id', id)
-    .select()
-    .single();
+  const row = await request<LeadDocument>(`/leads/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
 
-  if (error) throw error;
-
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
-    status: row.status as LeadStatus,
-    createdAt: row.created_at,
-  };
+  return toLead(row);
 }
 
 export async function updateLead(id: string, data: Partial<LeadInput>): Promise<Lead> {
-  await delay(400);
-  const { data: row, error } = await supabase
-    .from('leads')
-    .update({
-      ...(data.name !== undefined && { name: data.name }),
-      ...(data.email !== undefined && { email: data.email }),
-      ...(data.phone !== undefined && { phone: data.phone }),
-      ...(data.status !== undefined && { status: data.status }),
-    })
-    .eq('id', id)
-    .select()
-    .single();
+  const row = await request<LeadDocument>(`/leads/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 
-  if (error) throw error;
+  return toLead(row);
+}
+
+interface ImportLeadDocumentResult {
+  created: LeadDocument[];
+  summary: ImportLeadResult['summary'];
+  errors: ImportLeadResult['errors'];
+}
+
+export async function importLeads(leads: LeadInput[]): Promise<ImportLeadResult> {
+  const result = await request<ImportLeadDocumentResult>('/leads/import', {
+    method: 'POST',
+    body: JSON.stringify({ leads }),
+  });
 
   return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
-    status: row.status as LeadStatus,
-    createdAt: row.created_at,
+    created: result.created.map(toLead),
+    summary: result.summary,
+    errors: result.errors,
   };
 }

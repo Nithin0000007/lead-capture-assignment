@@ -1,5 +1,6 @@
-import { UserPlus, SearchX, Inbox } from 'lucide-react';
-import type { Lead } from '@/types/lead';
+import { ChevronLeft, ChevronRight, Inbox, SearchX, UserPlus } from 'lucide-react';
+import { PAGE_SIZE_OPTIONS } from '@/types/lead';
+import type { Lead, PaginationMeta } from '@/types/lead';
 import { LeadTable, LeadCardList } from '@/components/LeadTable';
 
 interface LeadListProps {
@@ -7,10 +8,13 @@ interface LeadListProps {
   loading: boolean;
   error: string | null;
   searchQuery: string;
+  pagination: PaginationMeta;
   onRowClick: (lead: Lead) => void;
   onStatusChange: (lead: Lead, status: Lead['status']) => void;
   onNewLead: () => void;
   onRetry: () => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (limit: number) => void;
 }
 
 function SkeletonTable() {
@@ -64,15 +68,84 @@ function SkeletonCards() {
   );
 }
 
+interface PaginationControlsProps {
+  pagination: PaginationMeta;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (limit: number) => void;
+}
+
+function PaginationControls({
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+}: PaginationControlsProps) {
+  const start = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+  const end = Math.min(pagination.page * pagination.limit, pagination.total);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-xs text-slate-500">
+        Showing <span className="font-medium text-slate-700">{start}</span>-
+        <span className="font-medium text-slate-700">{end}</span> of{' '}
+        <span className="font-medium text-slate-700">{pagination.total}</span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-xs text-slate-500">
+          Rows
+          <select
+            value={pagination.limit}
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 outline-none transition-colors hover:border-slate-300 focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10"
+          >
+            {PAGE_SIZE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onPageChange(pagination.page - 1)}
+            disabled={!pagination.hasPreviousPage}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="min-w-20 text-center text-xs font-medium text-slate-600">
+            Page {pagination.page} of {Math.max(pagination.totalPages, 1)}
+          </span>
+          <button
+            type="button"
+            onClick={() => onPageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LeadList({
   leads,
   loading,
   error,
   searchQuery,
+  pagination,
   onRowClick,
   onStatusChange,
   onNewLead,
   onRetry,
+  onPageChange,
+  onPageSizeChange,
 }: LeadListProps) {
   if (loading) {
     return (
@@ -150,9 +223,21 @@ export function LeadList({
     <>
       <div className="hidden md:block bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <LeadTable leads={leads} onRowClick={onRowClick} onStatusChange={onStatusChange} />
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
       </div>
       <div className="md:hidden">
         <LeadCardList leads={leads} onCardClick={onRowClick} onStatusChange={onStatusChange} />
+        <div className="mt-3 rounded-2xl border border-slate-200 bg-white">
+          <PaginationControls
+            pagination={pagination}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+          />
+        </div>
       </div>
     </>
   );
