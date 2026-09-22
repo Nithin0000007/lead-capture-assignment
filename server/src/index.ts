@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { connectDB } from "./config/db";
 import leadRoutes from "./routes/leadRoutes";
+import webhookRoutes from "./routes/webhookRoutes";
+import activityRoutes from "./routes/activityRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 
 dotenv.config();
@@ -14,6 +16,8 @@ app.use(express.json());
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/leads", leadRoutes);
+app.use("/api/webhook", webhookRoutes);
+app.use("/api/activities", activityRoutes);
 
 app.use(errorHandler);
 

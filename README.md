@@ -7,25 +7,51 @@ A full-stack lead management application built with React, TypeScript, Vite, Tai
 ```text
 lead-capture-assignment-main/
 |-- client/                  # React + Vite frontend
-|   |-- src/
-|   |   |-- api/             # Backend API integration
-|   |   |-- components/      # UI components
-|   |   |-- hooks/           # React state/data hooks
-|   |   |-- lib/             # Utilities such as formatting and CSV parsing
-|   |   `-- types/           # Shared frontend TypeScript types
-|   `-- package.json
 |-- server/                  # Express + MongoDB backend
 |   |-- src/
+|   |   |-- __tests__/       # Integration tests
 |   |   |-- config/          # Database connection
 |   |   |-- controllers/     # Request handlers
 |   |   |-- middleware/      # Express middleware
-|   |   |-- models/          # Mongoose models
-|   |   `-- routes/          # API routes
+|   |   |-- models/          # Mongoose models (Lead, Activity)
+|   |   |-- routes/          # API routes
+|   |   `-- services/        # Business logic services
 |   `-- package.json
 |-- AGENT.md                 # Agent/developer working notes
 |-- GEMINI.md                # Additional project instructions
+|-- docker-compose.yml       # Docker orchestration
 `-- README.md
 ```
+
+## Features
+
+- **Lead Tracking:** Create, edit, search, and paginate leads.
+- **Webhook Integration:** `POST /api/webhook/meta-lead` for automated lead ingestion, with deduplication, normalization (E.164 phone, Title Case name), and robust error handling.
+- **Audit Trail:** Every change (`Created`, `Updated`, `StatusChanged`) is tracked in an `Activity` collection with granular field-level change history.
+- **Responsive UI:** Modern, responsive design with an integrated `ActivityTimeline` in the lead drawer.
+- **DevOps:** Fully Dockerized setup with `docker-compose.yml`.
+
+## API Overview
+
+Base URL: `http://localhost:5000/api`
+
+### New Webhook Endpoint
+```http
+POST /webhook/meta-lead
+```
+
+### New Activities Endpoint
+```http
+GET /activities/:leadId
+```
+
+## Docker Usage
+
+```bash
+docker-compose up --build
+```
+
+Runs the `client` (port 3000), `server` (port 5000), and `mongodb`.
 
 ## Tech Stack
 
@@ -108,14 +134,12 @@ npm run build
 
 Base URL: `http://localhost:5000/api`
 
-### Health
-
+### Webhook
 ```http
-GET /health
+POST /webhook/meta-lead
 ```
 
 ### Leads
-
 ```http
 GET /leads?page=1&limit=5&search=jane
 POST /leads
@@ -124,6 +148,12 @@ GET /leads/:id
 PATCH /leads/:id
 DELETE /leads/:id
 ```
+
+### Activities
+```http
+GET /activities/:leadId
+```
+
 
 `GET /leads` returns paginated data:
 
