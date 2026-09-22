@@ -14,7 +14,10 @@ function LeadTrackerApp() {
     loading,
     error,
     searchQuery,
+    pagination,
     handleSearchChange,
+    changePage,
+    changePageSize,
     loadLeads,
     addLead,
     changeStatus,
@@ -64,7 +67,7 @@ function LeadTrackerApp() {
 
   return (
     <div className="min-h-screen bg-slate-50/60">
-      <Header onNewLead={openCreateDrawer} leadCount={leads.length} />
+      <Header onNewLead={openCreateDrawer} leadCount={pagination.total} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -73,7 +76,7 @@ function LeadTrackerApp() {
             <p className="text-sm text-slate-500 mt-0.5">
               {loading
                 ? 'Loading your leads...'
-                : `${leads.length} ${leads.length === 1 ? 'lead' : 'leads'} in your pipeline`}
+                : `${pagination.total} ${pagination.total === 1 ? 'lead' : 'leads'} in your pipeline`}
             </p>
           </div>
           <SearchBar value={searchQuery} onChange={handleSearchChange} />
@@ -84,10 +87,13 @@ function LeadTrackerApp() {
           loading={loading}
           error={error}
           searchQuery={searchQuery}
+          pagination={pagination}
           onRowClick={openEditDrawer}
           onStatusChange={handleStatusChange}
           onNewLead={openCreateDrawer}
           onRetry={loadLeads}
+          onPageChange={changePage}
+          onPageSizeChange={changePageSize}
         />
 
         {!loading && !error && leads.length > 0 && (

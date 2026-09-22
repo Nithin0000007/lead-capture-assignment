@@ -16,6 +16,20 @@ export interface LeadInput {
   status: LeadStatus;
 }
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+export interface PaginatedLeads {
+  leads: Lead[];
+  pagination: PaginationMeta;
+}
+
 export const LEAD_STATUSES: LeadStatus[] = [
   'New',
   'Contacted',
@@ -23,3 +37,6 @@ export const LEAD_STATUSES: LeadStatus[] = [
   'Converted',
   'Lost',
 ];
+
+export const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100] as const;
+export const DEFAULT_PAGE_SIZE = 5;

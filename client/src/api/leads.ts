@@ -1,4 +1,4 @@
-import type { Lead, LeadInput, LeadStatus } from '@/types/lead';
+import type { Lead, LeadInput, LeadStatus, PaginatedLeads, PaginationMeta } from '@/types/lead';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api').replace(
   /\/$/,
@@ -16,7 +16,14 @@ interface LeadDocument {
 
 interface ApiResponse<T> {
   data: T;
+  pagination?: PaginationMeta;
   error?: string;
+}
+
+interface LeadQueryParams {
+  page: number;
+  limit: number;
+  search?: string;
 }
 
 function toLead(row: LeadDocument): Lead {
@@ -52,18 +59,45 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return payload.data;
 }
 
-async function fetchLeads(search?: string): Promise<Lead[]> {
-  const query = search ? `?search=${encodeURIComponent(search)}` : '';
-  const rows = await request<LeadDocument[]>(`/leads${query}`);
-  return rows.map(toLead);
+async function requestPaginatedLeads(path: string): Promise<PaginatedLeads> {
+  const response = await fetch(`${API_BASE_URL}${path}`);
+  const payload = (await response.json().catch(() => ({}))) as Partial<
+    ApiResponse<LeadDocument[]>
+  >;
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? 'Request failed');
+  }
+
+  if (payload.data === undefined || payload.pagination === undefined) {
+    throw new Error('Invalid API response');
+  }
+
+  return {
+    leads: payload.data.map(toLead),
+    pagination: payload.pagination,
+  };
 }
 
-export function getLeads(): Promise<Lead[]> {
-  return fetchLeads();
+function buildLeadQuery({ page, limit, search }: LeadQueryParams): string {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (search) {
+    params.set('search', search);
+  }
+
+  return params.toString();
 }
 
-export function searchLeads(query: string): Promise<Lead[]> {
-  return fetchLeads(query);
+export function getLeads(params: LeadQueryParams): Promise<PaginatedLeads> {
+  return requestPaginatedLeads(`/leads?${buildLeadQuery(params)}`);
+}
+
+export function searchLeads(query: string, params: Omit<LeadQueryParams, 'search'>): Promise<PaginatedLeads> {
+  return getLeads({ ...params, search: query });
 }
 
 export async function createLead(data: LeadInput): Promise<Lead> {
