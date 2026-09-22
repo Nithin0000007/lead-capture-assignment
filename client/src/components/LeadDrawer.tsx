@@ -30,7 +30,7 @@ function validateEmail(email: string): boolean {
 }
 
 function validatePhone(phone: string): boolean {
-  const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  const cleaned = phone.replace(/[\s()-]/g, '');
   return /^\+?\d{7,15}$/.test(cleaned);
 }
 
