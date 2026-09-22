@@ -134,14 +134,12 @@ npm run build
 
 Base URL: `http://localhost:5000/api`
 
-### Health
-
+### Webhook
 ```http
-GET /health
+POST /webhook/meta-lead
 ```
 
 ### Leads
-
 ```http
 GET /leads?page=1&limit=5&search=jane
 POST /leads
@@ -150,6 +148,12 @@ GET /leads/:id
 PATCH /leads/:id
 DELETE /leads/:id
 ```
+
+### Activities
+```http
+GET /activities/:leadId
+```
+
 
 `GET /leads` returns paginated data:
 
