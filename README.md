@@ -1,80 +1,204 @@
 # Lead Capture System
 
-A full-stack Lead Management application built with **React**, **TypeScript**, **Vite**, **Tailwind CSS** on the frontend, and **Node.js**, **Express**, **TypeScript**, and **MongoDB (Mongoose)** on the backend.
-
----
+A full-stack lead management application built with React, TypeScript, Vite, Tailwind CSS, Node.js, Express, TypeScript, and MongoDB via Mongoose.
 
 ## Project Structure
 
 ```text
-lead-capture-assignment/
-├── client/                 # Frontend Workspace (React, Vite, Tailwind CSS)
-│   ├── src/
-│   │   ├── api/            # API integration layer
-│   │   ├── components/     # UI components (LeadList, Table, Drawer, Toast, etc.)
-│   │   ├── hooks/          # Custom React hooks (useLeads)
-│   │   ├── lib/            # Utilities & Supabase/API config
-│   │   └── types/          # TypeScript definitions
-│   └── package.json
-├── server/                 # Backend Workspace (Node.js, Express, MongoDB) [To be set up / expanded]
-└── GEMINI.md               # Project architecture and development guidelines
+lead-capture-assignment-main/
+|-- client/                  # React + Vite frontend
+|   |-- src/
+|   |   |-- api/             # Backend API integration
+|   |   |-- components/      # UI components
+|   |   |-- hooks/           # React state/data hooks
+|   |   |-- lib/             # Utilities such as formatting and CSV parsing
+|   |   `-- types/           # Shared frontend TypeScript types
+|   `-- package.json
+|-- server/                  # Express + MongoDB backend
+|   |-- src/
+|   |   |-- config/          # Database connection
+|   |   |-- controllers/     # Request handlers
+|   |   |-- middleware/      # Express middleware
+|   |   |-- models/          # Mongoose models
+|   |   `-- routes/          # API routes
+|   `-- package.json
+|-- AGENT.md                 # Agent/developer working notes
+|-- GEMINI.md                # Additional project instructions
+`-- README.md
 ```
-
----
 
 ## Tech Stack
 
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS, Lucide Icons
-- **Backend:** Node.js, Express, TypeScript, Mongoose
-- **Database:** MongoDB
+- Frontend: React 18, TypeScript, Vite, Tailwind CSS, lucide-react
+- Backend: Node.js, Express, TypeScript
+- Database: MongoDB with Mongoose
 
----
+## Features
+
+- Create and edit leads.
+- Search leads by name, email, or phone.
+- Paginated lead list with page sizes of 5, 10, 25, 50, and 100.
+- Inline lead status updates.
+- CSV import with a field-mapping modal before bulk creation.
+- Backend validation for single and bulk lead creation.
+- Responsive table/card layouts for desktop and mobile.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v18+ recommended)
-- MongoDB instance (local or MongoDB Atlas URI)
+- Node.js 18+
+- A local MongoDB instance or MongoDB Atlas connection string
 
-### 1. Backend Setup (`server/`)
+### Backend
 
-*(If applicable in your workspace)*
 ```bash
 cd server
 npm install
 ```
-Create a `.env` file in `server/`:
+
+Create `server/.env`:
+
 ```env
 PORT=5000
-MONGODB_URI=your_mongodb_connection_string
-CORS_ORIGIN=http://localhost:5173
+MONGO_URI=mongodb://127.0.0.1:27017/lead-capture
+CLIENT_URL=http://localhost:5173
 ```
-Run the development server:
+
+Run the backend:
+
 ```bash
 npm run dev
 ```
 
-### 2. Frontend Setup (`client/`)
+Build the backend:
+
+```bash
+npm run build
+```
+
+### Frontend
 
 ```bash
 cd client
 npm install
 ```
-Create a `.env` file in `client/` if needed:
+
+Create `client/.env` if you need to override the default API URL:
+
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
-Run the Vite dev server:
+
+Run the frontend:
+
 ```bash
 npm run dev
 ```
 
----
+Useful frontend checks:
 
-## Core Features
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
 
-- **Lead Management:** View, create, update, and delete leads.
-- **Search & Filter:** Instant search across lead name, email, and phone with debouncing.
-- **Status Tracking:** Track lead progress across statuses (`New`, `Contacted`, `Qualified`, `Converted`, `Lost`).
-- **Responsive UI:** Modern, accessible interface styled with Tailwind CSS.
+## API Overview
+
+Base URL: `http://localhost:5000/api`
+
+### Health
+
+```http
+GET /health
+```
+
+### Leads
+
+```http
+GET /leads?page=1&limit=5&search=jane
+POST /leads
+POST /leads/import
+GET /leads/:id
+PATCH /leads/:id
+DELETE /leads/:id
+```
+
+`GET /leads` returns paginated data:
+
+```json
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 0,
+    "totalPages": 0,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+  }
+}
+```
+
+Allowed `limit` values are `5`, `10`, `25`, `50`, and `100`. Invalid or missing limits fall back to `5`.
+
+### Lead Shape
+
+```ts
+{
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
+  createdAt: string;
+}
+```
+
+### CSV Import
+
+The frontend parses a selected CSV file, shows a field-mapping modal, validates mapped rows, and sends normalized leads to:
+
+```http
+POST /api/leads/import
+```
+
+Request body:
+
+```json
+{
+  "leads": [
+    {
+      "name": "Jane Harris",
+      "email": "jane@example.com",
+      "phone": "5554288013",
+      "status": "New"
+    }
+  ]
+}
+```
+
+Response body:
+
+```json
+{
+  "data": {
+    "created": [],
+    "summary": {
+      "received": 1,
+      "created": 1,
+      "failed": 0
+    },
+    "errors": []
+  }
+}
+```
+
+Required mapped fields are `Name`, `Email`, and `Phone`. `Status` is optional and defaults to `New`.
+
+## Notes
+
+- The frontend no longer uses Supabase. All lead data flows through the Express API.
+- Keep `client/` and `server/` dependencies installed separately.
+- The backend uses `MONGO_URI`, not `MONGODB_URI`.
