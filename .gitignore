@@ -1,3 +1,9 @@
 
 GEMINI.md
 CLAUDE.md
+
+server/.env
+
+node_modules
+dist
+.env
