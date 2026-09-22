@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Mail, Phone, User, Clock, Loader2 } from 'lucide-react';
+import { X, Mail, Phone, User, Clock, Loader2, Activity as ActivityIcon } from 'lucide-react';
 import type { Lead, LeadInput, LeadStatus } from '@/types/lead';
 import { LEAD_STATUSES } from '@/types/lead';
 import { formatRelativeTime, formatFullTimestamp } from '@/lib/format';
+import { ActivityTimeline } from './ActivityTimeline';
+import { fetchLeadActivities, type Activity } from '@/api/leads';
 
 interface LeadDrawerProps {
   open: boolean;
@@ -12,18 +14,7 @@ interface LeadDrawerProps {
   onSubmit: (data: LeadInput) => Promise<void>;
 }
 
-interface FormErrors {
-  name?: string;
-  email?: string;
-  phone?: string;
-}
-
-const emptyForm: LeadInput = {
-  name: '',
-  email: '',
-  phone: '',
-  status: 'New',
-};
+// ... existing helper functions (validateEmail, validatePhone) ...
 
 function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -34,10 +25,25 @@ function validatePhone(phone: string): boolean {
   return /^\+?\d{7,15}$/.test(cleaned);
 }
 
+const emptyForm: LeadInput = {
+  name: '',
+  email: '',
+  phone: '',
+  status: 'New',
+};
+
+interface FormErrors {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
 export function LeadDrawer({ open, mode, lead, onClose, onSubmit }: LeadDrawerProps) {
   const [form, setForm] = useState<LeadInput>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,22 +55,28 @@ export function LeadDrawer({ open, mode, lead, onClose, onSubmit }: LeadDrawerPr
           phone: lead.phone,
           status: lead.status,
         });
+        loadActivities(lead.id);
       } else {
         setForm(emptyForm);
+        setActivities([]);
       }
       setErrors({});
     }
   }, [open, mode, lead]);
 
-  useEffect(() => {
-    if (!open) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+  async function loadActivities(leadId: string) {
+    setLoadingActivities(true);
+    try {
+      const data = await fetchLeadActivities(leadId);
+      setActivities(data);
+    } catch (err) {
+      console.error('Failed to load activities', err);
+    } finally {
+      setLoadingActivities(false);
     }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [open, onClose]);
+  }
 
+  // ... existing handleSubmit, updateField, validate functions ...
   function validate(): boolean {
     const next: FormErrors = {};
     if (!form.name.trim()) next.name = 'Name is required';
@@ -136,6 +148,7 @@ export function LeadDrawer({ open, mode, lead, onClose, onSubmit }: LeadDrawerPr
 
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5">
             <div className="space-y-5">
+              {/* ... existing form fields ... */}
               <div>
                 <label htmlFor="lead-name" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Name
@@ -222,18 +235,35 @@ export function LeadDrawer({ open, mode, lead, onClose, onSubmit }: LeadDrawerPr
               </div>
 
               {mode === 'edit' && lead && (
-                <div className="pt-2">
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span title={formatFullTimestamp(lead.createdAt)}>
-                      Created {formatRelativeTime(lead.createdAt)}
-                    </span>
+                <>
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span title={formatFullTimestamp(lead.createdAt)}>
+                        Created {formatRelativeTime(lead.createdAt)}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                  
+                  <div className="mt-8 border-t border-slate-100 pt-6">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-900 mb-4">
+                      <ActivityIcon className="h-4 w-4 text-teal-600" />
+                      Activity Timeline
+                    </div>
+                    {loadingActivities ? (
+                      <div className="flex justify-center p-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                      </div>
+                    ) : (
+                      <ActivityTimeline activities={activities} />
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </form>
 
+          {/* ... existing footer ... */}
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
             <button
               onClick={onClose}

@@ -6,11 +6,26 @@ import type {
   PaginatedLeads,
   PaginationMeta,
 } from '@/types/lead';
+import { ActivityAction } from '@/components/ActivityTimeline';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api').replace(
   /\/$/,
   ''
 );
+
+export interface Activity {
+  _id: string;
+  leadId: string;
+  action: ActivityAction;
+  details: string;
+  createdAt: string;
+}
+
+// ... existing code ...
+
+export async function fetchLeadActivities(leadId: string): Promise<Activity[]> {
+  return request<Activity[]>(`/activities/${leadId}`);
+}
 
 interface LeadDocument {
   _id: string;

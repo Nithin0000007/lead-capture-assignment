@@ -7,24 +7,43 @@ A full-stack lead management application built with React, TypeScript, Vite, Tai
 ```text
 lead-capture-assignment-main/
 |-- client/                  # React + Vite frontend
-|   |-- src/
-|   |   |-- api/             # Backend API integration
-|   |   |-- components/      # UI components
-|   |   |-- hooks/           # React state/data hooks
-|   |   |-- lib/             # Utilities such as formatting and CSV parsing
-|   |   `-- types/           # Shared frontend TypeScript types
-|   `-- package.json
 |-- server/                  # Express + MongoDB backend
 |   |-- src/
 |   |   |-- config/          # Database connection
 |   |   |-- controllers/     # Request handlers
 |   |   |-- middleware/      # Express middleware
-|   |   |-- models/          # Mongoose models
-|   |   `-- routes/          # API routes
+|   |   |-- models/          # Mongoose models (Lead, Activity)
+|   |   |-- routes/          # API routes
+|   |   `-- services/        # Business logic services
 |   `-- package.json
 |-- AGENT.md                 # Agent/developer working notes
 |-- GEMINI.md                # Additional project instructions
 `-- README.md
+```
+
+## Database Design
+
+### Lead
+```ts
+{
+  _id: Types.ObjectId;
+  name: string;
+  email: string;
+  phone: string;
+  status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
+  createdAt: Date;
+}
+```
+
+### Activity (Audit Trail)
+```ts
+{
+  _id: Types.ObjectId;
+  leadId: Types.ObjectId; // Reference to Lead
+  action: 'Created' | 'Updated' | 'StatusChanged';
+  details: string;
+  createdAt: Date;
+}
 ```
 
 ## Tech Stack
