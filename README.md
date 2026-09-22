@@ -9,6 +9,7 @@ lead-capture-assignment-main/
 |-- client/                  # React + Vite frontend
 |-- server/                  # Express + MongoDB backend
 |   |-- src/
+|   |   |-- __tests__/       # Integration tests
 |   |   |-- config/          # Database connection
 |   |   |-- controllers/     # Request handlers
 |   |   |-- middleware/      # Express middleware
@@ -18,33 +19,39 @@ lead-capture-assignment-main/
 |   `-- package.json
 |-- AGENT.md                 # Agent/developer working notes
 |-- GEMINI.md                # Additional project instructions
+|-- docker-compose.yml       # Docker orchestration
 `-- README.md
 ```
 
-## Database Design
+## Features
 
-### Lead
-```ts
-{
-  _id: Types.ObjectId;
-  name: string;
-  email: string;
-  phone: string;
-  status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
-  createdAt: Date;
-}
+- **Lead Tracking:** Create, edit, search, and paginate leads.
+- **Webhook Integration:** `POST /api/webhook/meta-lead` for automated lead ingestion, with deduplication, normalization (E.164 phone, Title Case name), and robust error handling.
+- **Audit Trail:** Every change (`Created`, `Updated`, `StatusChanged`) is tracked in an `Activity` collection with granular field-level change history.
+- **Responsive UI:** Modern, responsive design with an integrated `ActivityTimeline` in the lead drawer.
+- **DevOps:** Fully Dockerized setup with `docker-compose.yml`.
+
+## API Overview
+
+Base URL: `http://localhost:5000/api`
+
+### New Webhook Endpoint
+```http
+POST /webhook/meta-lead
 ```
 
-### Activity (Audit Trail)
-```ts
-{
-  _id: Types.ObjectId;
-  leadId: Types.ObjectId; // Reference to Lead
-  action: 'Created' | 'Updated' | 'StatusChanged';
-  details: string;
-  createdAt: Date;
-}
+### New Activities Endpoint
+```http
+GET /activities/:leadId
 ```
+
+## Docker Usage
+
+```bash
+docker-compose up --build
+```
+
+Runs the `client` (port 3000), `server` (port 5000), and `mongodb`.
 
 ## Tech Stack
 
